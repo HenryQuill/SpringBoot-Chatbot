@@ -13,16 +13,30 @@ const Chatbot = () => {
     useEffect(() => {
         const user = getCurrentUser();
         if (user) {
-        setAuthUser(user);
+            setAuthUser(user);
+            fetchChatHistory(user.userId);
         }
     }, []);
+
+    const fetchChatHistory = async (userId) => {
+        try {
+            const response = await authAxios.get(`http://localhost:8080/api/chat/history/${userId}`);
+            if (response.data) {
+                setMessages(response.data);
+            }
+        } catch (error) {
+            console.error('Error fetching chat history:', error);
+        }
+    };
 
     const handleSend = async () => {
         // empty input => send nothing
         if (input.trim() === "") return;
 
         const newMessage = { id: Date.now(), text: input, sender: 'user' };
-        setMessages([...messages, newMessage]);
+        setMessages(prev => [...prev, newMessage]);
+        const messageToSend = input;
+
         setInput(''); // clear input field
         setLoading(true);
 
@@ -31,7 +45,7 @@ const Chatbot = () => {
                 "http://localhost:8080/api/chat/response",
                 {
                     userId: authUser.userId,   
-                    message: input
+                    message: messageToSend
                 }
             );
 
@@ -62,38 +76,38 @@ const Chatbot = () => {
             </div>
 
             <div className="chatbox">
-                    {messages.map((message) => (
-                        <div key={message.id} className={`message-container ${message.sender}`}>
-                            <img
-                                src={message.sender === 'user' ? '/images/user.jpg' : '/images/chatbot.jpg'}
-                                alt={`${message.sender} avatar`}
-                                className="avatar"
-                            />
-                            <div className={`message ${message.sender}`}>
-                                {message.text}
-                            </div>
+                {messages.map((message) => (
+                    <div key={message.id} className={`message-container ${message.sender === 'user' ? 'user' : 'ai'}`}>
+                        <img
+                            src={message.sender === 'user' ? '/images/user.jpg' : '/images/chatbot.jpg'}
+                            alt={`${message.sender} avatar`}
+                            className="avatar"
+                        />
+                        <div className={`message ${message.sender === 'user' ? 'user' : 'ai'}`}>
+                            {message.text}
                         </div>
-                    ))}
-                    {loading && (
-                        <div className="message-container ai">
-                            <img src="/images/chatbot.jpg" alt="AI avatar" className="avatar" />
-                            <div className="message ai">...</div>
-                        </div>
-                    )}
-                </div>
-                <div className="input-container">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={handleInputChange}
-                        onKeyDown={handleKeyPress}
-                        placeholder="Type your message..."
-                    />
-                    <button onClick={handleSend}>
-                        <FaPaperPlane />
-                    </button>
-                </div>
+                    </div>
+                ))}
+                {loading && (
+                    <div className="message-container ai">
+                        <img src="/images/chatbot.jpg" alt="AI avatar" className="avatar" />
+                        <div className="message ai">...</div>
+                    </div>
+                )}
             </div>
+            <div className="input-container">
+                <input
+                    type="text"
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your message..."
+                />
+                <button onClick={handleSend}>
+                    <FaPaperPlane />
+                </button>
+            </div>
+        </div>
     );
 };
 

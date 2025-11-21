@@ -1,5 +1,6 @@
 package com.example.chatbotv2.services;
 
+import com.example.chatbotv2.dto.CacheMessageDTO;
 import com.example.chatbotv2.models.Conversation;
 import com.example.chatbotv2.models.Message;
 import com.example.chatbotv2.models.User;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class ChatService {
@@ -19,11 +21,18 @@ public class ChatService {
     private final UserRepository userRepo;
     private final ChatClient chatClient;
 
-    public ChatService(ChatClient chatClient, ConversationRepository conversationRepo, MessageRepository messageRepo, UserRepository userRepo) {
+    private final ChatCacheService chatCacheService;
+
+    public ChatService(ChatClient chatClient,
+                       ConversationRepository conversationRepo,
+                       MessageRepository messageRepo,
+                       UserRepository userRepo,
+                       ChatCacheService chatCacheService) {
         this.conversationRepo= conversationRepo;
         this.messageRepo=messageRepo;
         this.userRepo=userRepo;
         this.chatClient = chatClient;
+        this.chatCacheService=chatCacheService;
     }
     public String botResponseMessage(String userInput) {
         return chatClient.prompt(userInput).call().content();
@@ -47,6 +56,7 @@ public class ChatService {
         userMessage.setMessageText(userInput);
         userMessage.setCreatedAt(LocalDateTime.now());
         messageRepo.save(userMessage);
+        chatCacheService.addMessage(userId,"user",userInput);
 
         // create and save bot responses
         String botReply = chatClient.prompt(userInput).call().content();
@@ -57,10 +67,18 @@ public class ChatService {
         botMessage.setMessageText(botReply);
         botMessage.setCreatedAt(LocalDateTime.now());
         messageRepo.save(botMessage);
+        chatCacheService.addMessage(userId,"bot",botReply);
 
         conversationRepo.save(conversation);
 
         return botReply;
+    }
+
+    // Hàm lấy lịch sử cho Controller gọi
+    public List<CacheMessageDTO> getHistory(Long userId) {
+        // Ở đây có thể thêm logic: Nếu Redis trả về rỗng -> Query DB -> Đổ lại vào Redis (Cache-Aside pattern)
+        // Nhưng để đơn giản hiện tại ta lấy từ Redis trước.
+        return chatCacheService.getChatHistory(userId);
     }
 
 }

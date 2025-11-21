@@ -75,6 +75,7 @@ public class WebSecurityConfig {
                         authorize.requestMatchers("/api/auth/signin").permitAll()
                                 .requestMatchers("/api/auth/signup").permitAll()
                                 .requestMatchers("/api/chat/response").permitAll()
+                                .requestMatchers("/api/chat/history").permitAll()
                                 .requestMatchers("/api/test/**").permitAll()
                                 .anyRequest().authenticated()
                 );
